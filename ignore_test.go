@@ -312,3 +312,61 @@ func TestPrecedingSlash(t *testing.T) {
 
 	assert.Equal(t, false, object.MatchesPath("something/foo/something.txt"), "should only ignore top level foo directories- not nested")
 }
+
+func TestMatchesLineNumbers(t *testing.T) {
+	gitIgnore := []string{"/foo", "bar/", "*.swp"}
+	object := CompileIgnoreLines(gitIgnore...)
+
+	var matchesPath bool
+	var reason *IgnorePattern
+
+	// /foo
+	matchesPath, reason = object.MatchesPathHow("foo/bar.wat")
+	assert.Equal(t, true, matchesPath, "should ignore all files in foo - nonpreceding /")
+	assert.NotNil(t, reason, "reason should not be nil")
+	assert.Equal(t, 1, reason.LineNo, "should match with line 1")
+	assert.Equal(t, gitIgnore[0], reason.Line, "should match with line /foo")
+
+	matchesPath, reason = object.MatchesPathHow("/foo/something.txt")
+	assert.Equal(t, true, matchesPath, "should ignore all files in foo - preceding /")
+	assert.NotNil(t, reason, "reason should not be nil")
+	assert.Equal(t, 1, reason.LineNo, "should match with line 1")
+	assert.Equal(t, gitIgnore[0], reason.Line, "should match with line /foo")
+
+	// bar/
+	matchesPath, reason = object.MatchesPathHow("bar/something.txt")
+	assert.Equal(t, true, matchesPath, "should ignore all files in bar - nonpreceding /")
+	assert.NotNil(t, reason, "reason should not be nil")
+	assert.Equal(t, 2, reason.LineNo, "should match with line 2")
+	assert.Equal(t, gitIgnore[1], reason.Line, "should match with line bar/")
+
+	matchesPath, reason = object.MatchesPathHow("/bar/somethingelse.go")
+	assert.Equal(t, true, matchesPath, "should ignore all files in bar - preceding /")
+	assert.NotNil(t, reason, "reason should not be nil")
+	assert.Equal(t, 2, reason.LineNo, "should match with line 2")
+	assert.Equal(t, gitIgnore[1], reason.Line, "should match with line bar/")
+
+	matchesPath, reason = object.MatchesPathHow("/boo/something/bar/boo.txt")
+	assert.Equal(t, true, matchesPath, "should block all files if bar is a sub directory")
+	assert.NotNil(t, reason, "reason should not be nil")
+	assert.Equal(t, 2, reason.LineNo, "should match with line 2")
+	assert.Equal(t, gitIgnore[1], reason.Line, "should match with line bar/")
+
+	// *.swp
+	matchesPath, reason = object.MatchesPathHow("yo.swp")
+	assert.Equal(t, true, matchesPath, "should ignore all swp files")
+	assert.NotNil(t, reason, "reason should not be nil")
+	assert.Equal(t, 3, reason.LineNo, "should match with line 3")
+	assert.Equal(t, gitIgnore[2], reason.Line, "should match with line *.swp")
+
+	matchesPath, reason = object.MatchesPathHow("something/else/but/it/hasyo.swp")
+	assert.Equal(t, true, matchesPath, "should ignore all swp files in other directories")
+	assert.NotNil(t, reason, "reason should not be nil")
+	assert.Equal(t, 3, reason.LineNo, "should match with line 3")
+	assert.Equal(t, gitIgnore[2], reason.Line, "should match with line *.swp")
+
+	// other
+	matchesPath, reason = object.MatchesPathHow("something/foo/something.txt")
+	assert.Equal(t, false, matchesPath, "should only ignore top level foo directories- not nested")
+	assert.Nil(t, reason, "reason should be nil as no match should happen")
+}
