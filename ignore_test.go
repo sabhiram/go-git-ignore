@@ -221,6 +221,31 @@ func TestCompileIgnoreLines_HandleLeadingSlashPath(t *testing.T) {
 	assert.Equal(t, false, object.MatchesPath("foo/hello.c"), "foo/hello.c should not match")
 }
 
+func TestCompileIgnoreFileAndLines(t *testing.T) {
+	writeFileToTestDir("test.gitignore", `
+/*.c
+`)
+	defer cleanupTestDir()
+
+	object, err := CompileIgnoreFileAndLines("./test_fixtures/test.gitignore", "**/foo", "bar")
+	assert.Nil(t, err, "err should be nil")
+	assert.NotNil(t, object, "object should not be nil")
+
+	assert.Equal(t, true, object.MatchesPath("hello.c"), "hello.c should match")
+	assert.Equal(t, false, object.MatchesPath("baz/hello.c"), "baz/hello.c should not match")
+
+	assert.Equal(t, true, object.MatchesPath("foo"), "foo should match")
+	assert.Equal(t, true, object.MatchesPath("baz/foo"), "baz/foo should match")
+	assert.Equal(t, true, object.MatchesPath("bar"), "bar should match")
+	assert.Equal(t, true, object.MatchesPath("baz/bar"), "baz/bar should match")
+}
+
+func TestCompileIgnoreFileAndLines_InvalidFile(t *testing.T) {
+	object, err := CompileIgnoreFileAndLines("./test_fixtures/invalid.file")
+	assert.Nil(t, object, "object should be nil")
+	assert.NotNil(t, err, "err should be unknown file / dir")
+}
+
 func ExampleCompileIgnoreLines() {
 	ignoreObject := CompileIgnoreLines([]string{"node_modules", "*.out", "foo/*.c"}...)
 
