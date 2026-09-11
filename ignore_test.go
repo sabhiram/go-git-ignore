@@ -305,6 +305,18 @@ func TestCompileIgnoreLines_WindowsPath(t *testing.T) {
 	assert.Equal(t, true, object.MatchesPath("a\\b\\c\\d"), "a\\b\\c\\d should match")
 }
 
+func TestQuestionMark(t *testing.T) {
+	object := CompileIgnoreLines("?bc")
+	assert.Equal(t, true, object.MatchesPath("abc"), "?bc should match abc")
+	assert.Equal(t, true, object.MatchesPath("xbc"), "?bc should match xbc")
+	assert.Equal(t, false, object.MatchesPath("bc"), "?bc should not match bc")
+	assert.Equal(t, false, object.MatchesPath("a/bc"), "? should not match a slash")
+
+	object = CompileIgnoreLines("foo.???")
+	assert.Equal(t, true, object.MatchesPath("foo.txt"), "foo.??? should match foo.txt")
+	assert.Equal(t, false, object.MatchesPath("foo.ts"), "foo.??? should not match foo.ts")
+}
+
 func TestWildCardFiles(t *testing.T) {
 	gitIgnore := []string{"*.swp", "/foo/*.wat", "bar/*.txt"}
 	object := CompileIgnoreLines(gitIgnore...)
