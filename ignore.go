@@ -107,6 +107,8 @@ func getPatternFromLine(line string) (*regexp.Regexp, bool) {
 		line = "/" + line
 	}
 
+	line = escapeRegexOperators(line)
+
 	// Handle escaping the "." char
 	line = regexp.MustCompile(`\.`).ReplaceAllString(line, `\.`)
 
@@ -144,6 +146,32 @@ func getPatternFromLine(line string) (*regexp.Regexp, bool) {
 	pattern, _ := regexp.Compile(expr)
 
 	return pattern, negatePattern
+}
+
+// escapeRegexOperators quotes operators that have no special meaning in a
+// gitignore pattern. Keep existing escapes and character classes intact.
+func escapeRegexOperators(line string) string {
+	var out strings.Builder
+	inClass := false
+	for i := 0; i < len(line); i++ {
+		b := line[i]
+		if b == '\\' && i+1 < len(line) {
+			out.WriteByte(b)
+			i++
+			out.WriteByte(line[i])
+			continue
+		}
+		if b == '[' {
+			inClass = true
+		} else if b == ']' {
+			inClass = false
+		}
+		if !inClass && strings.IndexByte("()+|^${}", b) >= 0 {
+			out.WriteByte('\\')
+		}
+		out.WriteByte(b)
+	}
+	return out.String()
 }
 
 ////////////////////////////////////////////////////////////
